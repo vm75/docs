@@ -1,0 +1,42 @@
+name: Publish Docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'version'
+
+jobs:
+  publish-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checkout the repository
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Read the version from the version file
+    - name: Read version
+      id: get-version
+      run: echo "VERSION=$(cat version)" >> $GITHUB_ENV
+
+    # Compress the docs folder
+    - name: Compress docs folder
+      run: zip -r docs.zip docs/*
+
+    # Publish or update the release
+    - name: Publish release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        VERSION=${{ env.VERSION }}
+        RELEASE_ID=$(gh release list --repo $GITHUB_REPOSITORY --json name,id -q ".[] | select(.name==\"$VERSION\") | .id")
+
+        if [ -n "$RELEASE_ID" ]; then
+          echo "Release $VERSION already exists. Updating..."
+          gh release upload "$VERSION" docs.zip --repo $GITHUB_REPOSITORY --clobber
+        else
+          echo "Creating new release $VERSION..."
+          gh release create "$VERSION" docs.zip --repo $GITHUB_REPOSITORY -t "$VERSION" -n "Release for version $VERSION"
+        fi
