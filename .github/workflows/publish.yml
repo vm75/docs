@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'version'
+  workflow_dispatch:
 
 jobs:
   publish-docs:
@@ -31,9 +32,10 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         VERSION=${{ env.VERSION }}
-        RELEASE_ID=$(gh release list --repo $GITHUB_REPOSITORY --json name,id -q ".[] | select(.name==\"$VERSION\") | .id")
+        # Check if the release already exists using the tagName
+        RELEASE_EXISTS=$(gh release list --repo $GITHUB_REPOSITORY --json name,tagName -q ".[] | select(.tagName==\"$VERSION\")")
 
-        if [ -n "$RELEASE_ID" ]; then
+        if [ -n "$RELEASE_EXISTS" ]; then
           echo "Release $VERSION already exists. Updating..."
           gh release upload "$VERSION" docs.zip --repo $GITHUB_REPOSITORY --clobber
         else
