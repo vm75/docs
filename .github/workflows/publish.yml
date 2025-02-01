@@ -45,4 +45,4 @@ jobs:
         run: |
           TITLE="Release: $(date +%Y%m%d-%H%M%S)"
           TAG_NAME="release-$(date +%Y%m%d-%H%M%S)"
-          gh release create "$TAG_NAME" --latest $ZIP_FILES --title "$TITLE" --notes "Auto-generated release from version updates."
+          gh release create "$TAG_NAME" --latest $RELEASE_FILES --title "$TITLE" --notes "Auto-generated release from version updates."
