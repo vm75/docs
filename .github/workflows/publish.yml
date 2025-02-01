@@ -1,5 +1,8 @@
 name: Release Zip on Version Change
 
+permissions:
+  contents: write
+
 on:
   push:
     paths:
@@ -45,4 +48,5 @@ jobs:
         run: |
           TITLE="Release: $(date +%Y%m%d-%H%M%S)"
           TAG_NAME="release-$(date +%Y%m%d-%H%M%S)"
+          ls $RELEASE_FILES
           gh release create "$TAG_NAME" --latest $RELEASE_FILES --title "$TITLE" --notes "Auto-generated release from version updates."
