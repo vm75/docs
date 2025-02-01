@@ -1,48 +1,43 @@
-name: Publish Docs
+name: Release Zip on Version Change
 
 on:
   push:
-    branches:
-      - main
     paths:
-      - 'version'
+      - 'docs/**/version'
   workflow_dispatch:
 
 jobs:
-  publish-docs:
+  release:
     runs-on: ubuntu-latest
-
-    permissions: # Ensure write access to contents and releases
-      contents: write
-      packages: write
-
     steps:
-    # Checkout the repository
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    # Read the version from the version file
-    - name: Read version
-      id: get-version
-      run: echo "VERSION=$(cat version)" >> $GITHUB_ENV
+      - name: Get changed version files
+        id: changed_files
+        run: |
+          echo "CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'docs/.*/version' | xargs)" >> $GITHUB_ENV
 
-    # Compress the docs folder
-    - name: Compress docs folder
-      run: zip -r docs.zip docs/*
+      - name: Process each changed version file
+        if: env.CHANGED_FILES != ''
+        run: |
+          for file in $CHANGED_FILES; do
+            SUBFOLDER=$(dirname "$file" | sed 's|docs/||')
+            VERSION=$(cat "$file" | tr -d '[:space:]')
+            ZIP_NAME="${SUBFOLDER}-${VERSION}.zip"
+            LATEST_ZIP_NAME="${SUBFOLDER}-latest.zip"
+            echo "Processing $SUBFOLDER with version $VERSION"
+            cd "docs/$SUBFOLDER"
+            zip -r "../../$ZIP_NAME" ./* -x "version"
+            cp "../../$ZIP_NAME" "../../$LATEST_ZIP_NAME"
+            cd -
+            echo "ZIP_FILES="$ZIP_FILES $ZIP_NAME $LATEST_ZIP_NAME"" >> $GITHUB_ENV
+          done
 
-    # Publish or update the release
-    - name: Publish release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        VERSION=${{ env.VERSION }}
-        # Check if the release already exists using the tagName
-        RELEASE_EXISTS=$(gh release list --repo $GITHUB_REPOSITORY --json name,tagName -q ".[] | select(.tagName==\"$VERSION\")")
-
-        if [ -n "$RELEASE_EXISTS" ]; then
-          echo "Release $VERSION already exists. Updating..."
-          gh release upload "$VERSION" docs.zip --repo $GITHUB_REPOSITORY --clobber
-        else
-          echo "Creating new release $VERSION..."
-          gh release create "$VERSION" docs.zip --repo $GITHUB_REPOSITORY -t "$VERSION" -n "Release for version $VERSION"
-        fi
+      - name: Create GitHub Release
+        if: env.ZIP_FILES != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="release-$(date +%Y%m%d-%H%M%S)"
+          gh release create "$TAG_NAME" $ZIP_FILES --title "New Release" --notes "Auto-generated release from version updates."
