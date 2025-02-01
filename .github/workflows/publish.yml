@@ -15,29 +15,34 @@ jobs:
 
       - name: Get changed version files
         id: changed_files
-        run: |
-          echo "CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'docs/.*/version' | xargs)" >> $GITHUB_ENV
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            **/version
 
       - name: Process each changed version file
-        if: env.CHANGED_FILES != ''
+        if: steps.changed_files.outputs.all_changed_files_count > 0
+        env:
+          CHANGED_FILES: ${{ steps.changed_files.outputs.all_changed_files }}
         run: |
           for file in $CHANGED_FILES; do
             SUBFOLDER=$(dirname "$file" | sed 's|docs/||')
             VERSION=$(cat "$file" | tr -d '[:space:]')
-            ZIP_NAME="${SUBFOLDER}-${VERSION}.zip"
-            LATEST_ZIP_NAME="${SUBFOLDER}-latest.zip"
+            ZIP_NAME="${SUBFOLDER}.zip"
             echo "Processing $SUBFOLDER with version $VERSION"
             cd "docs/$SUBFOLDER"
             zip -r "../../$ZIP_NAME" ./* -x "version"
-            cp "../../$ZIP_NAME" "../../$LATEST_ZIP_NAME"
+            cp version "../../$SUBFOLDER.version"
             cd -
-            echo "ZIP_FILES="$ZIP_FILES $ZIP_NAME $LATEST_ZIP_NAME"" >> $GITHUB_ENV
+            RELEASE_FILES="$RELEASE_FILES $ZIP_NAME $SUBFOLDER.version"
           done
+          echo "RELEASE_FILES="$RELEASE_FILES"" >> $GITHUB_ENV
 
       - name: Create GitHub Release
-        if: env.ZIP_FILES != ''
+        if: env.RELEASE_FILES != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          TITLE="Release: $(date +%Y%m%d-%H%M%S)"
           TAG_NAME="release-$(date +%Y%m%d-%H%M%S)"
-          gh release create "$TAG_NAME" $ZIP_FILES --title "New Release" --notes "Auto-generated release from version updates."
+          gh release create "$TAG_NAME" --latest $ZIP_FILES --title "$TITLE" --notes "Auto-generated release from version updates."
