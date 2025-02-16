@@ -36,6 +36,7 @@ jobs:
             cd "docs/$SUBFOLDER"
             zip -r "../../$ZIP_NAME" ./* -x "version"
             cp version "../../$SUBFOLDER.version"
+            [ -f $SUBFOLDER.png ] && cp $SUBFOLDER.png "../../$SUBFOLDER.png"
             cd -
             RELEASE_FILES="$RELEASE_FILES $ZIP_NAME $SUBFOLDER.version"
           done
