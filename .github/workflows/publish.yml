@@ -25,10 +25,8 @@ jobs:
 
       - name: Process each changed version file
         if: steps.changed_files.outputs.all_changed_files_count > 0
-        env:
-          CHANGED_FILES: ${{ steps.changed_files.outputs.all_changed_files }}
         run: |
-          for file in $CHANGED_FILES; do
+          for file in libraries/*/version ; do
             SUBFOLDER=$(dirname "$file" | sed 's|libraries/||')
             VERSION=$(cat "$file" | tr -d '[:space:]')
             ZIP_NAME="${SUBFOLDER}.zip"
@@ -36,7 +34,9 @@ jobs:
             cd "libraries/$SUBFOLDER"
             zip -r "../../$ZIP_NAME" ./* -x "version"
             cp version "../../$SUBFOLDER.version"
-            [ -f $SUBFOLDER.png ] && cp "$SUBFOLDER.png" "../../$SUBFOLDER.png"
+            if [ -f "$SUBFOLDER.png" ] ; then
+              cp "$SUBFOLDER.png" "../../$SUBFOLDER.png"
+            fi
             cd -
             RELEASE_FILES="$RELEASE_FILES $ZIP_NAME $SUBFOLDER.version"
           done
