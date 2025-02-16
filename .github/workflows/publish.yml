@@ -36,6 +36,7 @@ jobs:
             cp version "../../$SUBFOLDER.version"
             if [ -f "$SUBFOLDER.png" ] ; then
               cp "$SUBFOLDER.png" "../../$SUBFOLDER.png"
+              RELEASE_FILES="$RELEASE_FILES $SUBFOLDER.png"
             fi
             cd -
             RELEASE_FILES="$RELEASE_FILES $ZIP_NAME $SUBFOLDER.version"
