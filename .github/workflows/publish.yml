@@ -6,7 +6,7 @@ permissions:
 on:
   push:
     paths:
-      - 'docs/**/version'
+      - 'libraries/**/version'
   workflow_dispatch:
 
 jobs:
@@ -29,14 +29,14 @@ jobs:
           CHANGED_FILES: ${{ steps.changed_files.outputs.all_changed_files }}
         run: |
           for file in $CHANGED_FILES; do
-            SUBFOLDER=$(dirname "$file" | sed 's|docs/||')
+            SUBFOLDER=$(dirname "$file" | sed 's|libraries/||')
             VERSION=$(cat "$file" | tr -d '[:space:]')
             ZIP_NAME="${SUBFOLDER}.zip"
             echo "Processing $SUBFOLDER with version $VERSION"
-            cd "docs/$SUBFOLDER"
+            cd "libraries/$SUBFOLDER"
             zip -r "../../$ZIP_NAME" ./* -x "version"
             cp version "../../$SUBFOLDER.version"
-            [ -f $SUBFOLDER.png ] && cp $SUBFOLDER.png "../../$SUBFOLDER.png"
+            [ -f $SUBFOLDER.png ] && cp "$SUBFOLDER.png" "../../$SUBFOLDER.png"
             cd -
             RELEASE_FILES="$RELEASE_FILES $ZIP_NAME $SUBFOLDER.version"
           done
